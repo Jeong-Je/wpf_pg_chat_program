@@ -19,10 +19,10 @@ namespace WpfChattingProgram
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class LoginWindow : Window
     {
         NpgsqlConnection conn = new NpgsqlConnection("Server=127.0.0.1;Port=5432;Database=postgres;User Id=postgres;Password=postgres;");
-        public MainWindow()
+        public LoginWindow()
         {
             InitializeComponent();
             try
@@ -79,6 +79,18 @@ namespace WpfChattingProgram
                 if (passwordFromDatabase == passwordBox.Password)
                 {
                     MessageBox.Show("로그인 성공!", "로그인 성공", MessageBoxButton.OK);
+                    UserListWindow userListForm = new UserListWindow(usernameBox.Text);
+
+                    Close();
+
+                    try
+                    {
+                        userListForm.ShowDialog();
+                    }
+                    catch
+                    {
+
+                    }
                 }
                 else
                 {
@@ -93,7 +105,7 @@ namespace WpfChattingProgram
 
         private void registerBtn_Click(object sender, RoutedEventArgs e)
         {
-            RegisterForm registerForm = new RegisterForm();
+            RegisterWindow registerForm = new RegisterWindow();
             registerForm.Owner = this;
             try
             {

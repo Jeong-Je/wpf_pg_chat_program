@@ -19,10 +19,10 @@ namespace WpfChattingProgram
     /// <summary>
     /// Interaction logic for RegisterForm.xaml
     /// </summary>
-    public partial class RegisterForm : Window
+    public partial class RegisterWindow : Window
     {
         NpgsqlConnection conn = new NpgsqlConnection("Server=127.0.0.1;Port=5432;Database=postgres;User Id=postgres;Password=postgres;");
-        public RegisterForm()
+        public RegisterWindow()
         {
             InitializeComponent();
             try
