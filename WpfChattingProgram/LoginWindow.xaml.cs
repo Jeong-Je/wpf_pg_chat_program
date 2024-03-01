@@ -79,13 +79,13 @@ namespace WpfChattingProgram
                 if (passwordFromDatabase == passwordBox.Password)
                 {
                     MessageBox.Show("로그인 성공!", "로그인 성공", MessageBoxButton.OK);
-                    UserListWindow userListForm = new UserListWindow(usernameBox.Text);
+                    ChattingRoomWindow chatRoom = new ChattingRoomWindow(usernameBox.Text);
 
                     Close();
 
                     try
                     {
-                        userListForm.ShowDialog();
+                        chatRoom.ShowDialog();
                     }
                     catch
                     {
