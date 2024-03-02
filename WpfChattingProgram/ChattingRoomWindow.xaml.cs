@@ -38,7 +38,7 @@ namespace WpfChattingProgram
                 stream = client.GetStream();
                 SendUserNameToServer(username);
 
-                receiveDataFromServer();
+                _ = receiveDataFromServer(client);
             }
             catch
             {
@@ -69,31 +69,26 @@ namespace WpfChattingProgram
         }
 
 
-        private async Task receiveDataFromServer()
+        private async Task receiveDataFromServer(TcpClient client)
         {
-            try
-            {
-                StreamReader streamReader = new StreamReader(stream);
+            NetworkStream stream = client.GetStream();
+            byte[] buffer = new byte[1024];
+            int read;
 
-                while (true)
+            while((read = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            {
+                string message = Encoding.UTF8.GetString(buffer);
+               
+                if(message.Substring(0,3) == "%0%")
                 {
-                    string newData = await streamReader.ReadLineAsync();
-                    if (newData.Substring(0, 3) == "%0%")
-                    {
-                        UpdateUserList(newData.Substring(3));
-                    }
-                    else
-                    {
-                        UpdateNewChat(newData);
-                    }
-
-                    // Introduce a small delay to avoid busy-waiting
-                    await Task.Delay(10);
+                    int EndUsernameIdx = message.IndexOf("\n");
+                    UpdateUserList(message.Substring(3, EndUsernameIdx));
                 }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to receive chat from the server: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                else
+                {
+                    UpdateNewChat(message);
+                }
+                Array.Clear(buffer, 0x0, buffer.Length);
             }
         }
 
