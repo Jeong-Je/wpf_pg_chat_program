@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -21,19 +22,12 @@ namespace WpfChattingProgram
     /// </summary>
     public partial class LoginWindow : Window
     {
-        NpgsqlConnection conn = new NpgsqlConnection("Server=127.0.0.1;Port=5432;Database=postgres;User Id=postgres;Password=postgres;");
+        TcpClient client = new TcpClient();
+        NetworkStream stream = null;
         public LoginWindow()
         {
-            InitializeComponent();
-            try
-            {
-                conn.Open();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "DB 연결 실패", MessageBoxButton.OK, MessageBoxImage.Error);
-                Close();
-            }
+            client.Connect("127.0.0.1", 9999);
+            InitializeComponent();           
         }
 
         private void usernameBox_GotFocus(object sender, RoutedEventArgs e)
@@ -65,47 +59,39 @@ namespace WpfChattingProgram
 
         private void loginBtn_Click(object sender, RoutedEventArgs e)
         {
-            string sql = $"SELECT password FROM users_table WHERE username='{usernameBox.Text}'";
-            using var cmd = new NpgsqlCommand(sql, conn);
+            stream = client.GetStream();
 
-            using NpgsqlDataReader reader = cmd.ExecuteReader();
             if (usernameBox.Text.Length == 0 || passwordBox.Password.Length == 0)
             {
                 MessageBox.Show("입력칸을 모두 입력해주세요.", "로그인 실패", MessageBoxButton.OK, MessageBoxImage.Information);
             }
-            else if (reader.Read())
+            else
             {
-                string passwordFromDatabase = reader.GetString(0);
-                if (passwordFromDatabase == passwordBox.Password)
+                string auth = $"{{\"username\":\"{usernameBox.Text}\",\"password\":\"{passwordBox.Password}\"}}";
+                byte[] authData = Encoding.UTF8.GetBytes(auth);
+                stream.Write(authData, 0, authData.Length);
+
+                byte[] serverAuth = new byte[1024];
+                int read = stream.Read(serverAuth, 0, serverAuth.Length);
+                string serverMessage = Encoding.UTF8.GetString(serverAuth, 0, read);
+                
+                if(serverMessage == "Success")
                 {
-                    MessageBox.Show("로그인 성공!", "로그인 성공", MessageBoxButton.OK);
-                    ChattingRoomWindow chatRoom = new ChattingRoomWindow(usernameBox.Text);
-
+                    ChattingRoomWindow chattingRomm = new ChattingRoomWindow(usernameBox.Text, client, stream);
                     Close();
-
-                    try
-                    {
-                        chatRoom.ShowDialog();
-                    }
-                    catch
-                    {
-
-                    }
+                    chattingRomm.ShowDialog();
                 }
                 else
                 {
                     MessageBox.Show("회원정보가 일치하지 않습니다.", "로그인 실패", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-            }
-            else
-            {
-                MessageBox.Show("회원정보가 일치하지 않습니다.", "로그인 실패", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
+
+            }            
         }
 
         private void registerBtn_Click(object sender, RoutedEventArgs e)
         {
-            RegisterWindow registerForm = new RegisterWindow();
+            RegisterWindow registerForm = new RegisterWindow(client);
             registerForm.Owner = this;
             try
             {

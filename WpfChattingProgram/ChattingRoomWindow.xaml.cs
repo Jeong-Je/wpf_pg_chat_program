@@ -24,20 +24,18 @@ namespace WpfChattingProgram
     {
         TcpClient client = null;
         NetworkStream stream = null;
-        public ChattingRoomWindow(string username)
+
+        public ChattingRoomWindow(string username, TcpClient client, NetworkStream stream)
         {
+            this.client = client;
+            this.stream = stream;
+
             InitializeComponent();
             usernameTextBox.Text = username;
-            userIPTextBox.Text = GetLocalIP();
+            userIPTextBox.Text = GetPublicIP();
 
             try
-            {
-                client = new TcpClient();
-                client.Connect("127.0.0.1", 9999);
-
-                stream = client.GetStream();
-                SendUserNameToServer(username);
-
+            {               
                 _ = receiveDataFromServer(client);
             }
             catch
@@ -47,31 +45,33 @@ namespace WpfChattingProgram
             }
         }
 
-        private string GetLocalIP()
+        private string GetPublicIP()
         {
-            string IP = string.Empty;
-            IPHostEntry host = Dns.GetHostEntry(Dns.GetHostName());
-            IP = host.AddressList[1].ToString();
-            return IP;
-        }
-        private void SendUserNameToServer(string username)
-        {
+            string PublicIP;
+            string apiUrl = "https://api64.ipify.org?format=json";
+
             try
             {
-                StreamWriter writer = new StreamWriter(stream);
-                writer.WriteLine(username);
-                writer.Flush();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"클라이언트 username 전송 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
+                string jsonResponse;
+                using (WebClient client = new WebClient())
+                {
+                    jsonResponse = client.DownloadString(apiUrl);
+                }
 
+                PublicIP = jsonResponse.Split('"')[3];
+            }
+            catch
+            {
+                PublicIP = "null";
+            }
+
+            return PublicIP;
+
+
+        }
 
         private async Task receiveDataFromServer(TcpClient client)
         {
-            NetworkStream stream = client.GetStream();
             byte[] buffer = new byte[1024];
             int read;
 

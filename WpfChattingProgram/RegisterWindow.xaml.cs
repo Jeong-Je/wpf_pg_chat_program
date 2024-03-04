@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -21,19 +22,13 @@ namespace WpfChattingProgram
     /// </summary>
     public partial class RegisterWindow : Window
     {
-        NpgsqlConnection conn = new NpgsqlConnection("Server=127.0.0.1;Port=5432;Database=postgres;User Id=postgres;Password=postgres;");
-        public RegisterWindow()
+        TcpClient client = null;
+        NetworkStream stream = null;
+        public RegisterWindow(TcpClient client)
         {
+            this.client = client;
+            this.stream = client.GetStream();
             InitializeComponent();
-            try
-            {
-                conn.Open();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "DB 연결 실패", MessageBoxButton.OK, MessageBoxImage.Error);
-                Close();
-            }
         }
 
         private void TextBox_GotFocus(object sender, RoutedEventArgs e)
@@ -56,9 +51,9 @@ namespace WpfChattingProgram
 
         private void passwordBox_LostFocus(object sender, RoutedEventArgs e)
         {
-            if(passwordBox.Password.Length == 0)
+            if (passwordBox.Password.Length == 0)
             {
-                passwordPlaceholder.Visibility= Visibility.Visible;
+                passwordPlaceholder.Visibility = Visibility.Visible;
             }
         }
 
@@ -71,14 +66,15 @@ namespace WpfChattingProgram
         {
             if (password2Box.Password.Length == 0)
             {
-                password2Placeholder.Visibility= Visibility.Visible;
+                password2Placeholder.Visibility = Visibility.Visible;
             }
         }
 
 
         private void registerBtn_Click(object sender, RoutedEventArgs e)
         {
-            if(usernameBox.Text.Length == 0 || passwordBox.Password.Length == 0 || password2Box.Password.Length == 0) {
+            if (usernameBox.Text.Length == 0 || passwordBox.Password.Length == 0 || password2Box.Password.Length == 0)
+            {
                 MessageBox.Show("입력칸을 모두 입력해주세요.", "가입 실패", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else if (passwordBox.Password != password2Box.Password)
@@ -87,19 +83,23 @@ namespace WpfChattingProgram
             }
             else
             {
-                using var cmd = new NpgsqlCommand();
-                cmd.Connection = conn;
+                string register = $"{{\"username\":\"{usernameBox.Text}\",\"password\":\"{passwordBox.Password}\",\"register\":\"true\"}}";
+                byte[] data = Encoding.UTF8.GetBytes(register);
 
-                cmd.CommandText = ($"INSERT INTO users_table(username, password) VALUES('{usernameBox.Text}', '{passwordBox.Password}')");
+                stream.Write(data, 0, data.Length);
 
-                try
+                byte[] serverRes = new byte[1024];
+                int read = stream.Read(serverRes, 0, serverRes.Length);
+                string serverMessage = Encoding.UTF8.GetString(serverRes, 0, read);
+
+                if(serverMessage == "Success")
                 {
-                    cmd.ExecuteNonQuery();
-                    MessageBox.Show("가입 성공", "가입 완료", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("계정 등록이 완료되었습니다.", "가입 성공", MessageBoxButton.OK);
                     Close();
-                } catch (Exception ex)
+                }
+                else
                 {
-                    MessageBox.Show(ex.Message, "가입 실패", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show("이미 등록된 계정입니다.","가입 실패",MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
         }
